@@ -81,6 +81,10 @@ private:
         void stepSweep();
         uint16_t calculateSweepFrequency() const;
         uint8_t digitalOutput() const;
+        // DAC output centred on this channel's own midpoint (half its current
+        // volume) rather than on a fixed level, scaled to [-1, 1]. See
+        // Apu::accumulateMix() for why.
+        float centeredOutput() const;
 
         void saveState(StateWriter& writer) const;
         void loadState(StateReader& reader);
@@ -98,10 +102,20 @@ private:
         int frequencyTimer = 0;
         uint8_t wavePos = 0;
 
+        // Mean of digitalOutput() over one full waveform cycle at the current
+        // volume, cached because it is read every T-cycle. Invalidated
+        // (dcValid = false) whenever wave RAM or the volume code changes.
+        mutable float waveMean = 0.0f;
+        mutable bool waveMeanValid = false;
+
         void trigger();
         void stepFrequency();
         void stepLength();
         uint8_t digitalOutput() const;
+        // DAC output centred on this channel's own midpoint (half its current
+        // volume) rather than on a fixed level, scaled to [-1, 1]. See
+        // Apu::accumulateMix() for why.
+        float centeredOutput() const;
 
         void saveState(StateWriter& writer) const;
         void loadState(StateReader& reader);
@@ -130,6 +144,10 @@ private:
         void stepEnvelope();
         int reloadDivisor() const;
         uint8_t digitalOutput() const;
+        // DAC output centred on this channel's own midpoint (half its current
+        // volume) rather than on a fixed level, scaled to [-1, 1]. See
+        // Apu::accumulateMix() for why.
+        float centeredOutput() const;
 
         void saveState(StateWriter& writer) const;
         void loadState(StateReader& reader);

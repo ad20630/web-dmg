@@ -12,11 +12,14 @@
 // constructing one and reading its sampleRate doesn't require a user
 // gesture - only resume() does, which callers must invoke from one (e.g.
 // the ROM load handler) to satisfy the autoplay policy.
+const WARM_UP_EVENTS = ["pointerdown", "keydown", "touchend"] as const;
+
 export class GbAudioPlayer {
   private readonly context: AudioContext;
   private workletNode: AudioWorkletNode | null = null;
   private gainNode: GainNode | null = null;
   private readonly readyPromise: Promise<void>;
+  private readonly removeWarmUp: () => void;
 
   constructor() {
     const AudioContextCtor =
@@ -37,6 +40,20 @@ export class GbAudioPlayer {
         this.workletNode = workletNode;
         this.gainNode = gainNode;
       });
+
+    // Opening the OS audio stream can itself thump on some devices/drivers,
+    // and doing it at ROM load puts that thump right on top of the load.
+    // Start the (silent) stream on the first gesture of any kind instead, so
+    // it has long settled by the time a ROM starts. The file picker's click
+    // counts, so this also covers loading a ROM from disk.
+    const warmUp = () => {
+      this.resume();
+      for (const type of WARM_UP_EVENTS) window.removeEventListener(type, warmUp, true);
+    };
+    this.removeWarmUp = () => {
+      for (const type of WARM_UP_EVENTS) window.removeEventListener(type, warmUp, true);
+    };
+    for (const type of WARM_UP_EVENTS) window.addEventListener(type, warmUp, true);
   }
 
   // The device's actual native sample rate - pass this to the core's
@@ -58,7 +75,15 @@ export class GbAudioPlayer {
   }
 
   setMuted(muted: boolean) {
-    if (this.gainNode) this.gainNode.gain.value = muted ? 0 : 1;
+    // Short ramp rather than a hard set, which would click mid-sound.
+    this.gainNode?.gain.setTargetAtTime(muted ? 0 : 1, this.context.currentTime, 0.01);
+  }
+
+  // Call when the emulated game is replaced or its state jumps (ROM load,
+  // save-state load): fades out and drops whatever is queued from the old
+  // game and fades the new one in, instead of cutting between them.
+  reset() {
+    this.workletNode?.port.postMessage({ type: "reset" });
   }
 
   // `interleaved` is stereo float32 (L, R, L, R, ...) as produced by the
@@ -79,6 +104,7 @@ export class GbAudioPlayer {
   }
 
   close() {
+    this.removeWarmUp();
     this.workletNode?.disconnect();
     this.gainNode?.disconnect();
     void this.context.close();

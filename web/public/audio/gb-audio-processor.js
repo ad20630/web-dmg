@@ -71,11 +71,53 @@ class GbAudioProcessor extends AudioWorkletProcessor {
     // non-zero-crossing) samples, which is an audible click/pop. Ramp gain
     // linearly over the first few ms after priming ends - both at startup
     // and after any underrun-triggered re-prime - to smooth that transition.
-    this.rampLength = Math.ceil(sampleRate * 0.005); // ~5ms
+    this.underrunRampLength = Math.ceil(sampleRate * 0.005); // ~5ms
+    // A freshly (re)started game is different: with no boot ROM, its first
+    // sound-register writes make the output jump from silence to a channel's
+    // level within a frame or two, and a 5ms ramp is far too short to hide
+    // that. After a reset() fade in over a much longer window, using a
+    // quadratic curve so the start stays very quiet while the game inits.
+    this.resetRampLength = Math.ceil(sampleRate * 0.15); // ~150ms
+    this.rampLength = this.underrunRampLength;
     this.rampRemaining = 0;
+    this.rampQuadratic = false;
+    this.nextRampIsReset = true; // the very first start counts as a reset
+    // Tail of the audio that was playing when reset() arrived, faded out over
+    // a few ms so cutting to the new game doesn't itself click.
+    this.tailLength = Math.ceil(sampleRate * 0.005);
+    this.tailLeft = new Float32Array(this.tailLength);
+    this.tailRight = new Float32Array(this.tailLength);
+    this.tailPos = 0;
+    this.tailCount = 0;
     this.port.onmessage = (event) => {
+      if (event.data.type === "reset") {
+        this.reset();
+        return;
+      }
       this.ring.write(event.data.left, event.data.right);
     };
+  }
+
+  // Discard queued audio from the previous game (ROM swap / state load).
+  reset() {
+    const ring = this.ring;
+    const count = Math.min(ring.available, this.tailLength);
+    // Only capture a tail if audio was actually playing, not while priming.
+    if (!this.priming && count > 0) {
+      for (let i = 0; i < count; i++) {
+        const gain = 1 - (i + 1) / count;
+        const index = (ring.readIndex + i) % ring.capacity;
+        this.tailLeft[i] = ring.left[index] * gain;
+        this.tailRight[i] = ring.right[index] * gain;
+      }
+      this.tailPos = 0;
+      this.tailCount = count;
+    }
+    ring.available = 0;
+    ring.readIndex = ring.writeIndex;
+    this.priming = true;
+    this.rampRemaining = 0;
+    this.nextRampIsReset = true;
   }
 
   process(_inputs, outputs) {
@@ -85,9 +127,13 @@ class GbAudioProcessor extends AudioWorkletProcessor {
       if (this.ring.available < this.primeThreshold) {
         output[0].fill(0);
         output[1].fill(0);
+        this.drainTail(output);
         return true;
       }
       this.priming = false;
+      this.rampLength = this.nextRampIsReset ? this.resetRampLength : this.underrunRampLength;
+      this.rampQuadratic = this.nextRampIsReset;
+      this.nextRampIsReset = false;
       this.rampRemaining = this.rampLength;
     }
 
@@ -98,17 +144,29 @@ class GbAudioProcessor extends AudioWorkletProcessor {
       const right = output[1];
       const count = Math.min(this.rampRemaining, left.length);
       for (let i = 0; i < count; i++) {
-        const gain = (this.rampLength - this.rampRemaining + i + 1) / this.rampLength;
+        let gain = (this.rampLength - this.rampRemaining + i + 1) / this.rampLength;
+        if (this.rampQuadratic) gain *= gain;
         left[i] *= gain;
         right[i] *= gain;
       }
       this.rampRemaining -= count;
     }
+    this.drainTail(output);
 
     if (this.ring.available === 0) {
       this.priming = true; // ran dry - rebuild the cushion before resuming
     }
     return true;
+  }
+
+  drainTail(output) {
+    if (this.tailPos >= this.tailCount) return;
+    const count = Math.min(this.tailCount - this.tailPos, output[0].length);
+    for (let i = 0; i < count; i++) {
+      output[0][i] += this.tailLeft[this.tailPos + i];
+      output[1][i] += this.tailRight[this.tailPos + i];
+    }
+    this.tailPos += count;
   }
 }
 

@@ -439,6 +439,7 @@ export function EmulatorScreen() {
     saveCartRam(); // flush whatever ROM was previously running
     audioPlayerRef.current?.resume(); // called from a user gesture - satisfies autoplay policy
 
+    audioPlayerRef.current?.reset();
     emulator.reset();
     emulator.loadRom(bytes);
 
@@ -488,6 +489,7 @@ export function EmulatorScreen() {
     if (!saved) return;
     try {
       emulator.loadSaveState(base64ToBytes(saved));
+      audioPlayerRef.current?.reset();
       drawFrame(); // repaint immediately, even while paused
 
       setLoadFlash(true);

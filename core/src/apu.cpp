@@ -134,6 +134,10 @@ uint8_t Apu::PulseChannel::digitalOutput() const {
     return kDutyTable[duty][dutyPos] * volume;
 }
 
+float Apu::PulseChannel::centeredOutput() const {
+    return (static_cast<float>(digitalOutput()) - volume * 0.5f) / 7.5f;
+}
+
 void Apu::PulseChannel::saveState(StateWriter& writer) const {
     writer.writeU8(duty);
     writer.writeU8(envelopeInitialVolume);
@@ -215,6 +219,23 @@ uint8_t Apu::WaveChannel::digitalOutput() const {
     }
 }
 
+float Apu::WaveChannel::centeredOutput() const {
+    // Centre on the waveform's own mean rather than a fixed midpoint: wave RAM
+    // is typically blank (all zero) at boot, and a fixed midpoint would put
+    // such a channel at a constant -1 the moment it is triggered.
+    if (!waveMeanValid) {
+        const uint8_t shift = (volumeCode & 0x03) == 0 ? 4 : (volumeCode & 0x03) - 1;
+        int sum = 0;
+        for (const uint8_t byte : waveRam) {
+            sum += (byte >> 4) >> shift;
+            sum += (byte & 0x0F) >> shift;
+        }
+        waveMean = static_cast<float>(sum) / 32.0f;
+        waveMeanValid = true;
+    }
+    return (static_cast<float>(digitalOutput()) - waveMean) / 7.5f;
+}
+
 void Apu::WaveChannel::saveState(StateWriter& writer) const {
     writer.writeBool(dacPower);
     writer.writeU8(volumeCode);
@@ -234,6 +255,7 @@ void Apu::WaveChannel::loadState(StateReader& reader) {
     frequency = reader.readU16();
     lengthEnabled = reader.readBool();
     reader.readBytes(waveRam.data(), waveRam.size());
+    waveMeanValid = false;
 
     enabled = reader.readBool();
     lengthCounter = static_cast<int>(reader.readU32());
@@ -291,6 +313,10 @@ void Apu::NoiseChannel::stepEnvelope() {
 uint8_t Apu::NoiseChannel::digitalOutput() const {
     if (!enabled || !dacEnabled) return 0;
     return (~lfsr & 0x01) * volume;
+}
+
+float Apu::NoiseChannel::centeredOutput() const {
+    return (static_cast<float>(digitalOutput()) - volume * 0.5f) / 7.5f;
 }
 
 void Apu::NoiseChannel::saveState(StateWriter& writer) const {
@@ -388,17 +414,22 @@ void Apu::stepFrameSequencer() {
 }
 
 void Apu::accumulateMix() {
-    // Silenced channels (disabled, or DAC off) contribute 0 rather than the
-    // real DAC's small DC offset -- a common, inaudible simplification that
-    // avoids needing a high-pass filter to remove that offset.
+    // Silenced channels (disabled, or DAC off) contribute 0, and live ones
+    // are centred on their own midpoint (centeredOutput()) instead of the
+    // real DAC's fixed -1 floor. With a fixed floor, merely triggering a
+    // channel at volume 0 -- which many games do for all four channels at
+    // boot -- steps the mix from 0 to -1, and the DC-blocking filter turns
+    // that step into a loud decaying thump. Centring makes a silent channel
+    // contribute 0 whether or not it is running, and leaves the audible
+    // swing (half the volume either side of zero) unchanged.
     float left = 0.0f;
     float right = 0.0f;
 
     if (powerOn_) {
-        const float c1 = channel1_.digitalOutput() / 7.5f - 1.0f;
-        const float c2 = channel2_.digitalOutput() / 7.5f - 1.0f;
-        const float c3 = channel3_.digitalOutput() / 7.5f - 1.0f;
-        const float c4 = channel4_.digitalOutput() / 7.5f - 1.0f;
+        const float c1 = channel1_.centeredOutput();
+        const float c2 = channel2_.centeredOutput();
+        const float c3 = channel3_.centeredOutput();
+        const float c4 = channel4_.centeredOutput();
 
         const bool c1On = channel1_.enabled && channel1_.dacEnabled;
         const bool c2On = channel2_.enabled && channel2_.dacEnabled;
@@ -546,6 +577,7 @@ void Apu::write8(uint16_t address, uint8_t value) {
     // Wave RAM stays accessible regardless of power state.
     if (address >= kWaveRamStart && address <= kWaveRamEnd) {
         channel3_.waveRam[address - kWaveRamStart] = value;
+        channel3_.waveMeanValid = false;
         return;
     }
 
@@ -616,6 +648,7 @@ void Apu::write8(uint16_t address, uint8_t value) {
             break;
         case kNr32:
             channel3_.volumeCode = (value >> 5) & 0x03;
+            channel3_.waveMeanValid = false;
             break;
         case kNr33:
             channel3_.frequency = (channel3_.frequency & 0x0700) | value;
