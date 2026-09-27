@@ -160,3 +160,51 @@
 #clr-picker input.clr-color:focus {
   border-color: var(--color-outline-strong);
 }
+
+.gb-rgb-fields {
+  order: 1;
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  width: calc(100% - 40px);
+  margin: 0 20px 20px;
+}
+
+.gb-rgb-label {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding-left: 6px;
+  border: 1px solid var(--color-outline);
+  border-radius: 8px;
+  background-color: var(--color-background);
+  color: var(--color-foreground-secondary);
+  font-family: sans-serif;
+  font-size: 11px;
+}
+
+.gb-rgb-label:focus-within {
+  border-color: var(--color-outline-strong);
+}
+
+.gb-rgb-field {
+  width: 34px;
+  height: 28px;
+  padding: 0 4px 0 0;
+  border: 0;
+  background: none;
+  color: var(--color-foreground);
+  font-family: sans-serif;
+  font-size: 12px;
+  -moz-appearance: textfield;
+}
+
+.gb-rgb-field:focus {
+  outline: none;
+}
+
+.gb-rgb-field::-webkit-inner-spin-button,
+.gb-rgb-field::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}

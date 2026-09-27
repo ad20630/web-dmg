@@ -38,6 +38,74 @@ const SWATCH_SELECTOR = ".gb-color-swatch";
 // Themes that get Coloris's light popup; the rest (dark, gba) get the dark one.
 const LIGHT_THEMES = ["light", "dmg"];
 
+// Coloris has no concept of per-channel fields, only a single value field
+// whose format (hex/rgb/hsl) can be toggled. Instead these build three R/G/B
+// number fields alongside that field, wired directly to Coloris's DOM below.
+const RGB_CHANNELS = [
+  { id: "gb-rgb-r", label: "R", name: "Red" },
+  { id: "gb-rgb-g", label: "G", name: "Green" },
+  { id: "gb-rgb-b", label: "B", name: "Blue" },
+] as const;
+
+const clamp255 = (n: number): number => Math.min(255, Math.max(0, Math.round(n) || 0));
+
+// Reads the three fields and writes the resulting hex into Coloris's own
+// value field, then dispatches `change` so Coloris's own listener re-parses
+// it: this drives the gradient/hue markers and, through Coloris's normal
+// pick flow, sets the open swatch's value and fires `input` on it.
+function pushRgbFields() {
+  const colorValueInput = document.getElementById("clr-color-value") as HTMLInputElement | null;
+  if (!colorValueInput) return;
+  const rgb = RGB_CHANNELS.map(({ id }) =>
+    clamp255(Number((document.getElementById(id) as HTMLInputElement | null)?.value))
+  ) as Rgb;
+  colorValueInput.value = rgbToHex(rgb);
+  colorValueInput.dispatchEvent(new Event("change"));
+}
+
+// Mirrors a hex color into the three fields, skipping whichever one is
+// focused so a round trip through Coloris doesn't fight the user's typing.
+function setRgbFields(hex: string) {
+  const rgb = hexToRgb(hex);
+  RGB_CHANNELS.forEach(({ id }, i) => {
+    const field = document.getElementById(id) as HTMLInputElement | null;
+    if (field && document.activeElement !== field) field.value = String(rgb[i]);
+  });
+}
+
+// Builds the three fields once inside Coloris's popup (a global singleton
+// Coloris itself never tears down, so later mounts of this editor find them
+// already there).
+function ensureRgbFields() {
+  if (document.getElementById(RGB_CHANNELS[0].id)) return;
+  const colorValueInput = document.getElementById("clr-color-value");
+  if (!colorValueInput) return;
+
+  const container = document.createElement("div");
+  container.className = "gb-rgb-fields";
+  RGB_CHANNELS.forEach(({ id, label, name }) => {
+    const wrapper = document.createElement("label");
+    wrapper.className = "gb-rgb-label";
+    wrapper.append(label);
+    const field = document.createElement("input");
+    // type="number" ignores maxLength, so plain digits are filtered by hand.
+    field.type = "text";
+    field.id = id;
+    field.inputMode = "numeric";
+    field.maxLength = 3;
+    field.autocomplete = "off";
+    field.className = "gb-rgb-field";
+    field.setAttribute("aria-label", name);
+    field.oninput = () => {
+      field.value = field.value.replace(/\D/g, "").slice(0, 3);
+      pushRgbFields();
+    };
+    wrapper.appendChild(field);
+    container.appendChild(wrapper);
+  });
+  colorValueInput.insertAdjacentElement("afterend", container);
+}
+
 const BUTTON_CLASS = "rounded border px-3 py-1 text-sm";
 const SECONDARY_BUTTON_CLASS = `${BUTTON_CLASS} border-outline bg-surface text-foreground-secondary`;
 
@@ -92,6 +160,7 @@ export function CustomPaletteEditor({
       if (cancelled) return;
       colorisRef.current = Coloris;
       Coloris.init();
+      ensureRgbFields();
       Coloris({
         el: SWATCH_SELECTOR,
         themeMode: LIGHT_THEMES.includes(document.documentElement.dataset.theme ?? "")
@@ -303,7 +372,13 @@ export function CustomPaletteEditor({
                     type="text"
                     readOnly
                     value={shownColors[index]}
-                    onInput={(event) => setColor(index, event.currentTarget.value)}
+                    onInput={(event) => {
+                      setColor(index, event.currentTarget.value);
+                      setRgbFields(event.currentTarget.value);
+                    }}
+                    // Coloris doesn't reset the R/G/B fields on open (it only
+                    // knows about its own value field), so seed them here.
+                    onClick={(event) => setRgbFields(event.currentTarget.value)}
                     // Nothing here is meant to be selected. user-select covers most
                     // browsers, but Safari ignores it on inputs, so collapse any
                     // selection that still happens.
