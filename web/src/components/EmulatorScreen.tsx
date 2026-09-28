@@ -10,11 +10,13 @@ import { useCustomPalettes } from "@/lib/customPalettes";
 import { findGameBoyColorPalette } from "@/lib/gameBoyColorPalettes";
 import {
   AUTO_PALETTE,
+  AUTO_PALETTE_SGB,
   DEFAULT_PALETTE,
   paletteColor,
   resolvePalette,
   type Palette,
 } from "@/lib/palettes";
+import { findSuperGameBoyPalette } from "@/lib/superGameBoyPalettes";
 import { useIntegerScaling } from "@/lib/settings";
 import type { EmulatorInstance, EmulatorModule } from "@/lib/wasm/types";
 
@@ -118,6 +120,7 @@ export function EmulatorScreen() {
   const [romName, setRomName] = useState<string | null>(null);
   const [paletteKey, setPaletteKey] = useState<string>(DEFAULT_PALETTE);
   const [autoPalette, setAutoPalette] = useState<Palette | null>(null);
+  const [autoPaletteSgb, setAutoPaletteSgb] = useState<Palette | null>(null);
   const customPalettes = useCustomPalettes();
   // Colors from the palette editor's draft, shown live while it's open.
   const [previewPalette, setPreviewPalette] = useState<Palette | null>(null);
@@ -245,7 +248,8 @@ export function EmulatorScreen() {
   // otherwise the selection. drawFrame reads it through a ref so a palette
   // change repaints without giving drawFrame a new identity - the frame loop
   // below depends on it and would restart on every change (each color drag).
-  const palette = previewPalette ?? resolvePalette(paletteKey, autoPalette, customPalettes);
+  const palette =
+    previewPalette ?? resolvePalette(paletteKey, autoPalette, autoPaletteSgb, customPalettes);
   const paletteRef = useRef<Palette>(palette);
 
   const drawFrame = useCallback(() => {
@@ -445,6 +449,7 @@ export function EmulatorScreen() {
     emulator.loadRom(bytes);
 
     setAutoPalette(findGameBoyColorPalette(bytes));
+    setAutoPaletteSgb(findSuperGameBoyPalette(bytes));
 
     const cartridgeId = readCartridgeId(bytes);
     cartridgeIdRef.current = cartridgeId;
@@ -649,7 +654,8 @@ export function EmulatorScreen() {
           <PalettePicker
             value={paletteKey}
             onChange={setPaletteKey}
-            autoColors={resolvePalette(AUTO_PALETTE, autoPalette, customPalettes)}
+            autoColors={resolvePalette(AUTO_PALETTE, autoPalette, autoPaletteSgb, customPalettes)}
+            autoColorsSgb={resolvePalette(AUTO_PALETTE_SGB, autoPalette, autoPaletteSgb, customPalettes)}
             onPreview={setPreviewPalette}
             onOpenChange={setPalettePickerOpen}
           />

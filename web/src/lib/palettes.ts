@@ -4,7 +4,7 @@ import type { Rgb } from "@/lib/gameBoyColorPalettes";
 export type Palette = readonly Rgb[];
 // "preset" is the built-in list; "custom" is the user's own saved palettes
 // (see customPalettes.ts), which aren't in PALETTE_LIST.
-export type PaletteGroup = "hardware" | "boot" | "preset" | "custom";
+export type PaletteGroup = "hardware" | "sgb" | "boot" | "preset" | "custom";
 
 // Headers within the Preset section.
 export type PresetSubgroup = "monochrome" | "duotone" | "twelve";
@@ -18,11 +18,12 @@ export interface PaletteEntry {
 }
 
 // Sections in the order the picker shows them.
-export const PALETTE_GROUPS: readonly PaletteGroup[] = ["hardware", "boot", "preset", "custom"];
+export const PALETTE_GROUPS: readonly PaletteGroup[] = ["hardware", "boot", "sgb", "preset", "custom"];
 
 export const PALETTE_GROUP_LABELS: Record<PaletteGroup, string> = {
   hardware: "Hardware",
-  boot: "GBC Boot",
+  sgb: "SGB",
+  boot: "GBC",
   preset: "Presets",
   custom: "Custom",
 };
@@ -33,14 +34,19 @@ export const PRESET_SUBGROUP_LABELS: Record<PresetSubgroup, string> = {
   twelve: "12 Color",
 };
 
-// "Auto" isn't in PALETTE_LIST: it resolves to the running game's GBC palette
-// when it has one (see findGameBoyColorPalette), otherwise to the fallback.
-// It's shown in the hardware section.
+// Neither "Auto" option is in PALETTE_LIST: each resolves to the running
+// game's palette when it has one (see findGameBoyColorPalette and
+// findSuperGameBoyPalette), otherwise to the fallback. Both are shown in the
+// hardware section.
 export const AUTO_PALETTE = "auto";
-export const AUTO_PALETTE_LABEL = "Auto Palette";
+export const AUTO_PALETTE_LABEL = "Auto (GBC)";
 export const AUTO_PALETTE_GROUP: PaletteGroup = "hardware";
+export const AUTO_PALETTE_SGB = "auto-sgb";
+export const AUTO_PALETTE_SGB_LABEL = "Auto (SGB)";
 export const DEFAULT_PALETTE = AUTO_PALETTE;
 export const FALLBACK_PALETTE = "grayscale";
+// The SGB BIOS's own default when a game isn't in its palette table.
+export const FALLBACK_PALETTE_SGB = "sgb-1-a";
 
 const COLORS_PER_LAYER = 4;
 
@@ -112,17 +118,6 @@ export const PALETTE_LIST: readonly PaletteEntry[] = [
     ],
   },
   {
-    key: "sgb",
-    label: "Super GB",
-    group: "hardware",
-    colors: [
-      [247, 231, 198],
-      [214, 142, 73],
-      [166, 55, 37],
-      [51, 30, 80],
-    ],
-  },
-  {
     key: "virtual-boy",
     label: "Virtual Boy",
     group: "hardware",
@@ -131,6 +126,358 @@ export const PALETTE_LIST: readonly PaletteEntry[] = [
       [164, 0, 0],
       [85, 0, 0],
       [0, 0, 0],
+    ],
+  },
+  {
+    key: "sgb-1-a",
+    label: "1-A",
+    group: "sgb",
+    colors: [
+      [248, 232, 200],
+      [216, 144, 72],
+      [168, 40, 32],
+      [48, 24, 80],
+    ],
+  },
+  {
+    key: "sgb-1-b",
+    label: "1-B",
+    group: "sgb",
+    colors: [
+      [216, 216, 192],
+      [200, 176, 112],
+      [176, 80, 16],
+      [0, 0, 0],
+    ],
+  },
+  {
+    key: "sgb-1-c",
+    label: "1-C",
+    group: "sgb",
+    colors: [
+      [248, 192, 248],
+      [232, 152, 80],
+      [152, 56, 96],
+      [56, 56, 152],
+    ],
+  },
+  {
+    key: "sgb-1-d",
+    label: "1-D",
+    group: "sgb",
+    colors: [
+      [248, 248, 168],
+      [192, 128, 72],
+      [248, 0, 0],
+      [80, 24, 0],
+    ],
+  },
+  {
+    key: "sgb-1-e",
+    label: "1-E",
+    group: "sgb",
+    colors: [
+      [248, 216, 176],
+      [120, 192, 120],
+      [104, 136, 64],
+      [88, 56, 32],
+    ],
+  },
+  {
+    key: "sgb-1-f",
+    label: "1-F",
+    group: "sgb",
+    colors: [
+      [216, 232, 248],
+      [224, 136, 80],
+      [168, 0, 0],
+      [0, 64, 16],
+    ],
+  },
+  {
+    key: "sgb-1-g",
+    label: "1-G",
+    group: "sgb",
+    colors: [
+      [0, 0, 80],
+      [0, 160, 232],
+      [120, 120, 0],
+      [248, 248, 88],
+    ],
+  },
+  {
+    key: "sgb-1-h",
+    label: "1-H",
+    group: "sgb",
+    colors: [
+      [248, 232, 224],
+      [248, 184, 136],
+      [128, 64, 0],
+      [48, 24, 0],
+    ],
+  },
+  {
+    key: "sgb-2-a",
+    label: "2-A",
+    group: "sgb",
+    colors: [
+      [240, 200, 160],
+      [192, 136, 72],
+      [40, 120, 0],
+      [0, 0, 0],
+    ],
+  },
+  {
+    key: "sgb-2-b",
+    label: "2-B",
+    group: "sgb",
+    colors: [
+      [248, 248, 248],
+      [248, 232, 80],
+      [248, 48, 0],
+      [80, 0, 88],
+    ],
+  },
+  {
+    key: "sgb-2-c",
+    label: "2-C",
+    group: "sgb",
+    colors: [
+      [248, 192, 248],
+      [232, 136, 136],
+      [120, 48, 232],
+      [40, 40, 152],
+    ],
+  },
+  {
+    key: "sgb-2-d",
+    label: "2-D",
+    group: "sgb",
+    colors: [
+      [248, 248, 160],
+      [0, 248, 0],
+      [248, 48, 0],
+      [0, 0, 80],
+    ],
+  },
+  {
+    key: "sgb-2-e",
+    label: "2-E",
+    group: "sgb",
+    colors: [
+      [248, 200, 128],
+      [144, 176, 224],
+      [40, 16, 96],
+      [16, 8, 16],
+    ],
+  },
+  {
+    key: "sgb-2-f",
+    label: "2-F",
+    group: "sgb",
+    colors: [
+      [208, 248, 248],
+      [248, 144, 80],
+      [160, 0, 0],
+      [24, 0, 0],
+    ],
+  },
+  {
+    key: "sgb-2-g",
+    label: "2-G",
+    group: "sgb",
+    colors: [
+      [104, 184, 56],
+      [224, 80, 64],
+      [224, 184, 128],
+      [0, 24, 0],
+    ],
+  },
+  {
+    key: "sgb-2-h",
+    label: "2-H",
+    group: "sgb",
+    colors: [
+      [248, 248, 248],
+      [184, 184, 184],
+      [112, 112, 112],
+      [0, 0, 0],
+    ],
+  },
+  {
+    key: "sgb-3-a",
+    label: "3-A",
+    group: "sgb",
+    colors: [
+      [248, 248, 248],
+      [184, 184, 184],
+      [112, 112, 112],
+      [0, 0, 0],
+    ],
+  },
+  {
+    key: "sgb-3-b",
+    label: "3-B",
+    group: "sgb",
+    colors: [
+      [216, 216, 192],
+      [224, 128, 32],
+      [0, 80, 0],
+      [0, 16, 16],
+    ],
+  },
+  {
+    key: "sgb-3-c",
+    label: "3-C",
+    group: "sgb",
+    colors: [
+      [224, 168, 200],
+      [248, 248, 120],
+      [0, 184, 248],
+      [32, 32, 88],
+    ],
+  },
+  {
+    key: "sgb-3-d",
+    label: "3-D",
+    group: "sgb",
+    colors: [
+      [240, 248, 184],
+      [224, 168, 120],
+      [8, 200, 0],
+      [0, 0, 0],
+    ],
+  },
+  {
+    key: "sgb-3-e",
+    label: "3-E",
+    group: "sgb",
+    colors: [
+      [248, 248, 192],
+      [224, 176, 104],
+      [176, 120, 32],
+      [80, 72, 112],
+    ],
+  },
+  {
+    key: "sgb-3-f",
+    label: "3-F",
+    group: "sgb",
+    colors: [
+      [120, 120, 200],
+      [248, 104, 248],
+      [248, 208, 0],
+      [64, 64, 64],
+    ],
+  },
+  {
+    key: "sgb-3-g",
+    label: "3-G",
+    group: "sgb",
+    colors: [
+      [248, 248, 248],
+      [96, 216, 80],
+      [200, 48, 56],
+      [56, 0, 0],
+    ],
+  },
+  {
+    key: "sgb-3-h",
+    label: "3-H",
+    group: "sgb",
+    colors: [
+      [224, 248, 160],
+      [120, 200, 56],
+      [72, 136, 24],
+      [8, 24, 0],
+    ],
+  },
+  {
+    key: "sgb-4-a",
+    label: "4-A",
+    group: "sgb",
+    colors: [
+      [240, 168, 104],
+      [120, 168, 248],
+      [208, 0, 208],
+      [0, 0, 120],
+    ],
+  },
+  {
+    key: "sgb-4-b",
+    label: "4-B",
+    group: "sgb",
+    colors: [
+      [240, 232, 240],
+      [232, 160, 96],
+      [64, 120, 56],
+      [24, 8, 8],
+    ],
+  },
+  {
+    key: "sgb-4-c",
+    label: "4-C",
+    group: "sgb",
+    colors: [
+      [248, 224, 224],
+      [216, 160, 208],
+      [152, 160, 224],
+      [8, 0, 0],
+    ],
+  },
+  {
+    key: "sgb-4-d",
+    label: "4-D",
+    group: "sgb",
+    colors: [
+      [248, 248, 184],
+      [144, 200, 200],
+      [72, 104, 120],
+      [8, 32, 72],
+    ],
+  },
+  {
+    key: "sgb-4-e",
+    label: "4-E",
+    group: "sgb",
+    colors: [
+      [248, 216, 168],
+      [224, 168, 120],
+      [120, 88, 136],
+      [0, 32, 48],
+    ],
+  },
+  {
+    key: "sgb-4-f",
+    label: "4-F",
+    group: "sgb",
+    colors: [
+      [184, 208, 208],
+      [216, 128, 216],
+      [128, 0, 160],
+      [56, 0, 0],
+    ],
+  },
+  {
+    key: "sgb-4-g",
+    label: "4-G",
+    group: "sgb",
+    colors: [
+      [176, 224, 24],
+      [184, 32, 88],
+      [40, 16, 0],
+      [0, 128, 96],
+    ],
+  },
+  {
+    key: "sgb-4-h",
+    label: "4-H",
+    group: "sgb",
+    colors: [
+      [248, 248, 200],
+      [184, 192, 88],
+      [128, 136, 64],
+      [64, 80, 40],
     ],
   },
   {
@@ -587,17 +934,23 @@ export function findPalette(key: string): PaletteEntry | undefined {
   return PALETTES_BY_KEY.get(key);
 }
 
-// The colors to draw with for a picker selection: Auto uses the running
-// game's GBC palette when it has one (autoPalette), custom keys look in the
-// user's saved palettes, everything else is a built-in, and anything unknown
-// (e.g. a custom palette that was just deleted) falls back to grayscale.
+// The colors to draw with for a picker selection: each Auto option uses the
+// running game's palette when it has one (autoPalette/autoPaletteSgb),
+// custom keys look in the user's saved palettes, everything else is a
+// built-in, and anything unknown (e.g. a custom palette that was just
+// deleted) falls back to grayscale. Auto (SGB) instead falls back to 1-A,
+// the SGB BIOS's own default for unrecognized games.
 export function resolvePalette(
   key: string,
   autoPalette: Palette | null,
+  autoPaletteSgb: Palette | null,
   customPalettes: readonly CustomPalette[]
 ): Palette {
   const fallback = PALETTES_BY_KEY.get(FALLBACK_PALETTE)?.colors ?? PALETTE_LIST[0].colors;
   if (key === AUTO_PALETTE) return autoPalette ?? fallback;
+  if (key === AUTO_PALETTE_SGB) {
+    return autoPaletteSgb ?? PALETTES_BY_KEY.get(FALLBACK_PALETTE_SGB)?.colors ?? fallback;
+  }
   if (key.startsWith(CUSTOM_KEY_PREFIX)) {
     const id = key.slice(CUSTOM_KEY_PREFIX.length);
     return customPalettes.find((palette) => palette.id === id)?.colors ?? fallback;

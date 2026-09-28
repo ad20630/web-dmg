@@ -17,6 +17,8 @@ import {
   AUTO_PALETTE,
   AUTO_PALETTE_GROUP,
   AUTO_PALETTE_LABEL,
+  AUTO_PALETTE_SGB,
+  AUTO_PALETTE_SGB_LABEL,
   PALETTE_GROUPS,
   PALETTE_GROUP_LABELS,
   PALETTE_LIST,
@@ -49,9 +51,10 @@ const ARROW_BUTTON_CLASS =
 interface PalettePickerProps {
   value: string;
   onChange: (key: string) => void;
-  // What "Auto Palette" is showing right now (the game's palette, or the
+  // What each Auto option is showing right now (the game's palette, or the
   // fallback), so its swatch previews the real colors.
   autoColors: Palette;
+  autoColorsSgb: Palette;
   // Live preview of the palette being edited (null when not editing), drawn
   // on the game screen in place of the selected palette.
   onPreview: (colors: Palette | null) => void;
@@ -60,7 +63,14 @@ interface PalettePickerProps {
   onOpenChange?: (open: boolean) => void;
 }
 
-export function PalettePicker({ value, onChange, autoColors, onPreview, onOpenChange }: PalettePickerProps) {
+export function PalettePicker({
+  value,
+  onChange,
+  autoColors,
+  autoColorsSgb,
+  onPreview,
+  onOpenChange,
+}: PalettePickerProps) {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -88,14 +98,22 @@ export function PalettePicker({ value, onChange, autoColors, onPreview, onOpenCh
               subgroup: entry.subgroup,
             }));
     }
-    result[AUTO_PALETTE_GROUP].unshift({
-      key: AUTO_PALETTE,
-      label: AUTO_PALETTE_LABEL,
-      colors: autoColors,
-      hint: "Uses the game's own GBC palette when it has one, grayscale otherwise",
-    });
+    result[AUTO_PALETTE_GROUP].unshift(
+      {
+        key: AUTO_PALETTE,
+        label: AUTO_PALETTE_LABEL,
+        colors: autoColors,
+        hint: "Uses the game's own GBC palette when it has one, grayscale otherwise",
+      },
+      {
+        key: AUTO_PALETTE_SGB,
+        label: AUTO_PALETTE_SGB_LABEL,
+        colors: autoColorsSgb,
+        hint: "Uses the game's corresponding SGB palette when it has one, 1-A otherwise",
+      }
+    );
     return result;
-  }, [autoColors, customPalettes]);
+  }, [autoColors, autoColorsSgb, customPalettes]);
 
   const currentGroup =
     PALETTE_GROUPS.find((group) => sections[group].some((c) => c.key === value)) ??
@@ -120,8 +138,8 @@ export function PalettePicker({ value, onChange, autoColors, onPreview, onOpenCh
     return () => window.removeEventListener("keydown", handleKey, true);
   }, [open, editing]);
 
-  // Steps through every palette in section order (Hardware, GBC Boot, Preset,
-  // then Custom), wrapping from the last back to the first.
+  // Steps through every palette in section order (Hardware, GBC Boot, SGB,
+  // Preset, then Custom), wrapping from the last back to the first.
   const cycle = (step: 1 | -1) => {
     const choices = PALETTE_GROUPS.flatMap((group) => sections[group]);
     const index = choices.findIndex((c) => c.key === current.key);
@@ -245,17 +263,17 @@ export function PalettePicker({ value, onChange, autoColors, onPreview, onOpenCh
         // edited live) with the page still clickable around the dialog. The
         // dialog sits out of the game's way: docked to the right where the
         // centered game leaves room for it (the game column is 480px wide, so
-        // a 384px dialog clears it from 1280px up), to the right edge on
+        // a 448px dialog clears it from 1408px up), to the right edge on
         // phones in landscape, and as a bottom sheet on narrower screens,
         // where the side has no free room. Close it with the × or Escape.
         // `phone-landscape:visible` keeps the dialog showing while the menu
         // panel it lives in is made invisible around it.
-        <div className="pointer-events-none fixed inset-0 z-50 flex items-end phone-landscape:visible justify-center p-4 min-[1280px]:items-center min-[1280px]:justify-end phone-landscape:items-center phone-landscape:justify-end">
+        <div className="pointer-events-none fixed inset-0 z-50 flex items-end phone-landscape:visible justify-center p-4 min-[1408px]:items-center min-[1408px]:justify-end phone-landscape:items-center phone-landscape:justify-end">
           <div
             role="dialog"
             aria-modal="false"
             aria-label="Palette"
-            className="pointer-events-auto flex max-h-[45svh] w-full max-w-md flex-col rounded-sm border border-outline bg-surface p-4 text-sm text-foreground-secondary shadow-2xl min-[1280px]:max-h-full min-[1280px]:max-w-sm phone-landscape:max-h-full phone-landscape:max-w-xs"
+            className="pointer-events-auto flex max-h-[45svh] w-full max-w-lg flex-col rounded-sm border border-outline bg-surface p-4 text-sm text-foreground-secondary shadow-2xl min-[1408px]:max-h-full min-[1408px]:max-w-md phone-landscape:max-h-full phone-landscape:max-w-sm"
           >
             <div className="mb-3 flex shrink-0 items-center justify-between">
               {editing ? (
@@ -293,7 +311,7 @@ export function PalettePicker({ value, onChange, autoColors, onPreview, onOpenCh
               />
             ) : (
               <>
-                <div className="mb-3 flex shrink-0 gap-2" role="tablist" aria-label="Palette sections">
+                <div className="mb-3 flex shrink-0 gap-1" role="tablist" aria-label="Palette sections">
                   {PALETTE_GROUPS.map((group) => (
                     <button
                       key={group}
@@ -301,7 +319,7 @@ export function PalettePicker({ value, onChange, autoColors, onPreview, onOpenCh
                       role="tab"
                       aria-selected={tab === group}
                       onClick={() => setTab(group)}
-                      className={`min-w-0 flex-1 truncate rounded border px-2 py-1 text-sm ${
+                      className={`min-w-0 flex-1 truncate rounded border px-1 py-1 text-sm ${
                         tab === group
                           ? "border-outline-strong bg-surface-strong text-foreground"
                           : "border-outline bg-surface text-foreground-secondary"
