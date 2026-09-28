@@ -685,7 +685,7 @@ export function EmulatorScreen() {
               disabled={!romLoaded}
               aria-pressed={muted}
               title={muted ? "Unmute" : "Mute"}
-              className={`w-16 shrink-0 whitespace-nowrap rounded border px-2 py-1 text-center text-sm disabled:opacity-50 ${
+              className={`w-18 shrink-0 whitespace-nowrap rounded border px-2 py-1 text-center text-sm disabled:opacity-50 ${
                 muted
                   ? "border-outline-strong bg-surface-strong text-foreground"
                   : "border-outline bg-surface text-foreground-secondary"
@@ -731,26 +731,32 @@ export function EmulatorScreen() {
               onClick={handleSaveState}
               disabled={!romLoaded}
               title="Save state"
-              className={`shrink-0 whitespace-nowrap rounded border px-3 py-1 text-sm transition-colors disabled:opacity-50 ${
+              className={`relative shrink-0 whitespace-nowrap rounded border px-3 py-1 text-sm transition-colors disabled:opacity-50 ${
                 saveFlash
-                  ? "border-emerald-500 bg-emerald-900 text-emerald-200"
+                  ? "border-success bg-success-surface text-success-foreground"
                   : "border-outline bg-surface text-foreground-secondary"
               }`}
             >
-              {saveFlash ? "Saved!" : "Save"}
+              <span className="invisible">Save</span>
+              <span className="absolute inset-0 flex items-center justify-center">
+                {saveFlash ? "Saved!" : "Save"}
+              </span>
             </button>
             <button
               type="button"
               onClick={handleLoadState}
               disabled={!romLoaded || !filledSlots[selectedSlot]}
               title="Load state"
-              className={`shrink-0 whitespace-nowrap rounded border px-3 py-1 text-sm transition-colors disabled:opacity-50 ${
+              className={`relative shrink-0 whitespace-nowrap rounded border px-3 py-1 text-sm transition-colors disabled:opacity-50 ${
                 loadFlash
-                  ? "border-emerald-500 bg-emerald-900 text-emerald-200"
+                  ? "border-success bg-success-surface text-success-foreground"
                   : "border-outline bg-surface text-foreground-secondary"
               }`}
             >
-              {loadFlash ? "Loaded!" : "Load"}
+              <span className="invisible">Load</span>
+              <span className="absolute inset-0 flex items-center justify-center">
+                {loadFlash ? "Loaded!" : "Load"}
+              </span>
             </button>
           </div>
         </div>

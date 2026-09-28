@@ -30,6 +30,9 @@
   --color-foreground: var(--color-foreground);
   --color-foreground-secondary: var(--color-foreground-secondary);
   --color-foreground-muted: var(--color-foreground-muted);
+  --color-success: var(--color-success);
+  --color-success-surface: var(--color-success-surface);
+  --color-success-foreground: var(--color-success-foreground);
 }
 
 /*
@@ -56,6 +59,11 @@
    `theme()` rather than restating color numbers here, so the palette stays
    the single source of truth. */
 :root {
+  /* Tells the browser this page is already dark-mode-aware, so it won't
+     apply its own automatic dark-mode re-tinting to native controls (e.g.
+     buttons) on top of our explicit colors - that heuristic re-tinting is
+     what made the save/load flash colors drift between themes. */
+  color-scheme: dark;
   --color-background: var(--color-neutral-950);
   --color-surface: var(--color-neutral-900);
   --color-surface-translucent: theme("colors.neutral.900 / 80%");
@@ -73,9 +81,13 @@
   --color-foreground: var(--color-neutral-100);
   --color-foreground-secondary: var(--color-neutral-300);
   --color-foreground-muted: var(--color-neutral-400);
+  --color-success: var(--color-emerald-500);
+  --color-success-surface: var(--color-emerald-900);
+  --color-success-foreground: var(--color-emerald-200);
 }
 
 :root[data-theme="light"] {
+  color-scheme: light;
   --color-background: var(--color-neutral-100);
   --color-surface: var(--color-white);
   --color-surface-translucent: theme("colors.white / 80%");
@@ -91,11 +103,15 @@
   --color-foreground: var(--color-neutral-900);
   --color-foreground-secondary: var(--color-neutral-700);
   --color-foreground-muted: var(--color-neutral-500);
+  --color-success: var(--color-emerald-500);
+  --color-success-surface: var(--color-emerald-100);
+  --color-success-foreground: var(--color-emerald-800);
 }
 
 /* Game Boy DMG-01 inspired: beige shell, black d-pad/Select/Start, and the
    console's signature magenta A/B buttons. */
 :root[data-theme="dmg"] {
+  color-scheme: light;
   --color-background: var(--color-stone-300);
   --color-surface: var(--color-stone-100);
   --color-surface-translucent: theme("colors.stone.100 / 80%");
@@ -111,11 +127,15 @@
   --color-foreground: var(--color-stone-900);
   --color-foreground-secondary: var(--color-stone-700);
   --color-foreground-muted: var(--color-stone-500);
+  --color-success: var(--color-emerald-600);
+  --color-success-surface: var(--color-emerald-100);
+  --color-success-foreground: var(--color-emerald-800);
 }
 
 /* Game Boy Advance inspired: indigo shell and white A/B buttons. The purples
    are custom low-chroma values; Tailwind's violet scale is too saturated. */
 :root[data-theme="gba"] {
+  color-scheme: dark;
   --color-background: oklch(28% 0.09 290);
   --color-surface: oklch(35% 0.10 290);
   --color-surface-translucent: oklch(35% 0.10 290 / 80%);
