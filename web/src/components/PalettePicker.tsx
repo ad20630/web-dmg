@@ -319,7 +319,7 @@ export function PalettePicker({
                       role="tab"
                       aria-selected={tab === group}
                       onClick={() => setTab(group)}
-                      className={`min-w-0 flex-1 truncate rounded border px-1 py-1 text-sm ${
+                      className={`min-w-0 flex-1 truncate rounded border px-1 py-1 text-xs sm:text-sm ${
                         tab === group
                           ? "border-outline-strong bg-surface-strong text-foreground"
                           : "border-outline bg-surface text-foreground-secondary"
