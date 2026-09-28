@@ -115,6 +115,7 @@ export function EmulatorScreen() {
   const cartridgeIdRef = useRef<string | null>(null);
   const [status, setStatus] = useState<LoadStatus>("loading");
   const [romLoaded, setRomLoaded] = useState(false);
+  const [romName, setRomName] = useState<string | null>(null);
   const [paletteKey, setPaletteKey] = useState<string>(DEFAULT_PALETTE);
   const [autoPalette, setAutoPalette] = useState<Palette | null>(null);
   const customPalettes = useCustomPalettes();
@@ -432,7 +433,7 @@ export function EmulatorScreen() {
     setFilledSlots(next);
   }, []);
 
-  const loadRomBytes = (bytes: Uint8Array) => {
+  const loadRomBytes = (bytes: Uint8Array, name: string) => {
     const emulator = emulatorRef.current;
     if (!emulator) return;
 
@@ -458,6 +459,7 @@ export function EmulatorScreen() {
     }
     refreshFilledSlots(cartridgeId);
 
+    setRomName(name);
     setPaused(false);
     setRomLoaded(true);
   };
@@ -505,13 +507,17 @@ export function EmulatorScreen() {
   ) => {
     const file = event.target.files?.[0];
     if (!file) return;
-    loadRomBytes(new Uint8Array(await file.arrayBuffer()));
+    loadRomBytes(new Uint8Array(await file.arrayBuffer()), file.name);
   };
 
   const handleLoadTestRom = async () => {
     if (!selectedTestRom) return;
+    const romName =
+      TEST_ROM_GROUPS.flatMap((group) => Object.entries(group.roms)).find(
+        ([, url]) => url === selectedTestRom
+      )?.[0] ?? selectedTestRom;
     const response = await fetch(selectedTestRom);
-    loadRomBytes(new Uint8Array(await response.arrayBuffer()));
+    loadRomBytes(new Uint8Array(await response.arrayBuffer()), romName);
     // Clear any locally-picked file so the input doesn't keep showing its
     // name once a test ROM has taken over.
     if (fileInputRef.current) fileInputRef.current.value = "";
@@ -625,7 +631,7 @@ export function EmulatorScreen() {
             Reset
           </button>
         </div>
-        <div className="flex w-full min-w-0 shrink-0 flex-wrap items-center gap-3">
+        <div className="@container flex w-full min-w-0 shrink-0 flex-wrap items-center gap-3">
           <input
             ref={fileInputRef}
             type="file"
@@ -633,7 +639,12 @@ export function EmulatorScreen() {
             disabled={status !== "ready"}
             onChange={handleFileChange}
             autoComplete="off"
-            className="min-w-0 flex-1 overflow-hidden text-sm text-foreground-secondary file:mr-3 file:rounded-sm file:border file:border-outline file:bg-surface file:px-3 file:py-1 file:text-sm file:text-foreground-secondary"
+            // The filename/"No file chosen" label is browser-rendered text we
+            // can't remove outright, so once the row is too narrow to show it
+            // without clipping mid-word, make it transparent instead - the
+            // Browse button (styled via file:*, with its own explicit color)
+            // stays visible either way.
+            className="min-w-0 flex-1 overflow-hidden text-sm text-foreground-secondary @max-[400px]:text-transparent file:mr-3 file:rounded-sm file:border file:border-outline file:bg-surface file:px-3 file:py-1 file:text-sm file:text-foreground-secondary"
           />
           <PalettePicker
             value={paletteKey}
@@ -738,8 +749,12 @@ export function EmulatorScreen() {
           </div>
         </div>
         <p className="shrink-0 text-sm text-foreground-muted">
-          Status: {status}
-          {romLoaded ? (paused ? " · paused" : ` · running${speed !== 1 ? ` (${speed}x)` : ""}`) : ""}
+          Status: {romLoaded
+            ? paused
+              ? "paused"
+              : `running${speed !== 1 ? ` (${speed}x)` : ""}`
+            : status}
+          {romName ? ` · ${romName}` : ""}
         </p>
         </div>
       </div>
