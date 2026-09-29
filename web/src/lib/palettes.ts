@@ -89,10 +89,10 @@ export const PALETTE_LIST: readonly PaletteEntry[] = [
     label: "DMG",
     group: "hardware",
     colors: [
-      [155, 188, 15],
-      [139, 172, 15],
-      [48, 98, 48],
-      [15, 56, 15],
+      [140, 173, 40],
+      [108, 148, 33],
+      [66, 107, 41],
+      [33, 66, 49],
     ],
   },
   {
