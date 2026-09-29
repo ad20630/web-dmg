@@ -78,6 +78,7 @@ export function PalettePicker({
   }, [open, onOpenChange]);
   const [tab, setTab] = useState<PaletteGroup>(AUTO_PALETTE_GROUP);
   const [editing, setEditing] = useState<Draft | null>(null);
+  const [helpChoice, setHelpChoice] = useState<Choice | null>(null);
   const customPalettes = useCustomPalettes();
 
   const sections = useMemo(() => {
@@ -149,6 +150,7 @@ export function PalettePicker({
   const openPicker = () => {
     setTab(currentGroup);
     setEditing(null);
+    setHelpChoice(null);
     setOpen(true);
   };
 
@@ -212,7 +214,6 @@ export function PalettePicker({
         type="button"
         onClick={() => onChange(choice.key)}
         aria-pressed={selected}
-        title={choice.hint}
         className={`flex min-w-0 flex-col gap-1.5 rounded border p-2 text-left text-sm ${
           selected
             ? "border-outline-strong bg-surface-strong text-foreground"
@@ -273,7 +274,7 @@ export function PalettePicker({
             role="dialog"
             aria-modal="false"
             aria-label="Palette"
-            className="pointer-events-auto flex max-h-[45svh] w-full max-w-lg flex-col rounded-sm border border-outline bg-surface p-4 text-sm text-foreground-secondary shadow-2xl min-[1408px]:max-h-full min-[1408px]:max-w-md phone-landscape:max-h-full phone-landscape:max-w-sm"
+            className="pointer-events-auto relative flex max-h-[45svh] w-full max-w-lg flex-col rounded-sm border border-outline bg-surface p-4 text-sm text-foreground-secondary shadow-2xl min-[1408px]:max-h-full min-[1408px]:max-w-md phone-landscape:max-h-full phone-landscape:max-w-sm"
           >
             <div className="mb-3 flex shrink-0 items-center justify-between">
               {editing ? (
@@ -358,6 +359,18 @@ export function PalettePicker({
                           ✎
                         </button>
                       </div>
+                    ) : choice.hint ? (
+                      <div key={choice.key} className="relative flex min-w-0 flex-col">
+                        {renderChoice(choice)}
+                        <button
+                          type="button"
+                          onClick={() => setHelpChoice(choice)}
+                          aria-label={`About ${choice.label}`}
+                          className="absolute bottom-1.5 right-3 flex h-6 w-6 items-center justify-center rounded-full border border-outline bg-surface-translucent text-xs text-foreground-secondary"
+                        >
+                          ?
+                        </button>
+                      </div>
                     ) : (
                       renderChoice(choice)
                     );
@@ -384,6 +397,22 @@ export function PalettePicker({
                     copy of the palette you&apos;re using now.
                   </p>
                 )}
+              </>
+            )}
+
+            {helpChoice?.hint && (
+              <>
+                <div
+                  className="absolute inset-0 z-10"
+                  onClick={() => setHelpChoice(null)}
+                />
+                <p
+                  role="tooltip"
+                  className="absolute inset-x-4 top-1/2 z-20 -translate-y-1/2 rounded border border-outline-strong bg-surface-strong p-3 text-xs text-foreground shadow-lg"
+                >
+                  <span className="mb-1 block font-semibold">{helpChoice.label}</span>
+                  {helpChoice.hint}
+                </p>
               </>
             )}
           </div>

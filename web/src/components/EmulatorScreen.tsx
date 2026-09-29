@@ -413,9 +413,31 @@ export function EmulatorScreen() {
     return () => clearInterval(interval);
   }, [romLoaded, saveCartRam]);
 
+  // Auto-pause/mute while the tab is backgrounded, and only undo whichever
+  // of the two we changed ourselves - if the user had already paused or
+  // muted before switching away, leave that alone on return.
+  const autoPausedRef = useRef(false);
+  const autoMutedRef = useRef(false);
+
   useEffect(() => {
     const handleVisibilityChange = () => {
-      if (document.visibilityState === "hidden") saveCartRam();
+      if (document.visibilityState === "hidden") {
+        saveCartRam();
+        if (!romLoaded) return;
+        if (!paused) {
+          autoPausedRef.current = true;
+          setPaused(true);
+        }
+        if (!muted) {
+          autoMutedRef.current = true;
+          setMuted(true);
+        }
+      } else {
+        if (autoPausedRef.current) setPaused(false);
+        if (autoMutedRef.current) setMuted(false);
+        autoPausedRef.current = false;
+        autoMutedRef.current = false;
+      }
     };
     window.addEventListener("beforeunload", saveCartRam);
     document.addEventListener("visibilitychange", handleVisibilityChange);
@@ -423,7 +445,7 @@ export function EmulatorScreen() {
       window.removeEventListener("beforeunload", saveCartRam);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [saveCartRam]);
+  }, [saveCartRam, romLoaded, paused, muted]);
 
   const refreshFilledSlots = useCallback((cartridgeId: string | null) => {
     if (!cartridgeId) {

@@ -43,6 +43,7 @@ export function SettingsMenu() {
   // value derivable from props/state.
   const [theme, setTheme] = useState<Theme>("dark");
   const integerScaling = useIntegerScaling();
+  const [showScalingHelp, setShowScalingHelp] = useState(false);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -115,9 +116,38 @@ export function SettingsMenu() {
                 </button>
               ))}
             </div>
-            <h2 className="mb-3 mt-4 font-semibold text-foreground">
-              Integer Scaling
-            </h2>
+            <div className="mb-3 mt-4 flex items-center gap-2">
+              <h2 className="font-semibold text-foreground">Integer Scaling</h2>
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setShowScalingHelp((v) => !v)}
+                  aria-label="What is integer scaling?"
+                  aria-expanded={showScalingHelp}
+                  aria-controls="integer-scaling-help"
+                  className="flex h-5 w-5 items-center justify-center rounded-full border border-outline text-xs text-foreground-secondary"
+                >
+                  ?
+                </button>
+                {showScalingHelp && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-10"
+                      onClick={() => setShowScalingHelp(false)}
+                    />
+                    <p
+                      id="integer-scaling-help"
+                      role="tooltip"
+                      className="absolute left-0 top-full z-20 mt-2 w-56 rounded border border-outline-strong bg-surface-strong p-2 text-xs font-normal text-foreground shadow-lg"
+                    >
+                      When on, forces the game&apos;s resolution to be a clean
+                      multiple of the original Game Boy&apos;s. Results in a
+                      sharper image, but one that fills less of the screen.
+                    </p>
+                  </>
+                )}
+              </div>
+            </div>
             <div className="flex gap-2" role="group" aria-label="Integer scaling">
               {[
                 { value: false, label: "Off" },
