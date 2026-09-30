@@ -2,7 +2,14 @@
 
 import { useEffect, useState } from "react";
 
-import { setIntegerScaling, useIntegerScaling } from "@/lib/settings";
+import {
+  keyLabel,
+  setIntegerScaling,
+  setKeyBinding,
+  useIntegerScaling,
+  useKeyBindings,
+  type GbButton,
+} from "@/lib/settings";
 
 type Theme = "dark" | "light" | "dmg" | "gba";
 
@@ -44,11 +51,29 @@ export function SettingsMenu() {
   const [theme, setTheme] = useState<Theme>("dark");
   const integerScaling = useIntegerScaling();
   const [showScalingHelp, setShowScalingHelp] = useState(false);
+  const keyBindings = useKeyBindings();
+  const [rebinding, setRebinding] = useState<GbButton | null>(null);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setTheme(readTheme());
   }, []);
+
+  useEffect(() => {
+    if (!open || !rebinding) return;
+    // Capture phase, and stopped there, so the key is only used for binding:
+    // it doesn't press a game button, close the menu (Escape) or activate a
+    // focused control (Enter/Space).
+    const handleKey = (event: KeyboardEvent) => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (event.repeat) return;
+      if (event.code !== "Escape") setKeyBinding(rebinding, event.code);
+      setRebinding(null);
+    };
+    window.addEventListener("keydown", handleKey, true);
+    return () => window.removeEventListener("keydown", handleKey, true);
+  }, [open, rebinding]);
 
   useEffect(() => {
     if (!open) return;
@@ -68,7 +93,10 @@ export function SettingsMenu() {
     <>
       <button
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          setRebinding(null);
+          setOpen(true);
+        }}
         aria-label="Show settings"
         title="Settings"
         className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-outline bg-surface text-xs text-foreground-secondary"
@@ -167,6 +195,48 @@ export function SettingsMenu() {
                   {option.label}
                 </button>
               ))}
+            </div>
+            <div className="touch:hidden">
+            <h2 className="mb-3 mt-4 font-semibold text-foreground">Keyboard Controls</h2>
+            {(() => {
+              const keyCell = (button: GbButton, className = "") => (
+                <div key={button} className={`flex flex-col items-center gap-0.5 ${className}`}>
+                  <span className="text-xs">{button}</span>
+                  <button
+                    type="button"
+                    onClick={() => setRebinding(rebinding === button ? null : button)}
+                    aria-label={`Rebind ${button}`}
+                    className={`w-full min-w-0 truncate rounded border px-1 py-1 text-xs ${
+                      rebinding === button
+                        ? "border-outline-strong bg-surface-strong text-foreground"
+                        : "border-outline bg-surface text-foreground-secondary"
+                    }`}
+                  >
+                    {rebinding === button ? "Press…" : keyLabel(keyBindings[button])}
+                  </button>
+                </div>
+              );
+              return (
+                <div className="flex items-center justify-between gap-3">
+                  <div className="grid w-40 shrink-0 grid-cols-3 gap-1">
+                    {keyCell("Up", "col-start-2")}
+                    {keyCell("Left", "col-start-1 row-start-2")}
+                    {keyCell("Right", "col-start-3 row-start-2")}
+                    {keyCell("Down", "col-start-2 row-start-3")}
+                  </div>
+                  <div className="flex flex-1 flex-col gap-3">
+                    <div className="flex justify-center gap-2">
+                      {keyCell("Select", "w-14")}
+                      {keyCell("Start", "w-14")}
+                    </div>
+                    <div className="flex justify-center gap-2">
+                      {keyCell("B", "w-14")}
+                      {keyCell("A", "w-14")}
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
             </div>
           </div>
         </div>

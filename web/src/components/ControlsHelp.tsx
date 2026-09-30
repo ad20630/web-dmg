@@ -2,8 +2,11 @@
 
 import { useEffect, useState } from "react";
 
+import { GB_BUTTONS, keyLabel, useKeyBindings } from "@/lib/settings";
+
 export function ControlsHelp() {
   const [open, setOpen] = useState(false);
+  const keyBindings = useKeyBindings();
 
   useEffect(() => {
     if (!open) return;
@@ -56,11 +59,12 @@ export function ControlsHelp() {
 
             <h3 className="mb-1 font-medium text-foreground-secondary">Keyboard</h3>
             <ul className="mb-3 text-foreground-muted space-y-0.5">
-              <li>Arrow keys - D-pad</li>
-              <li>Z - B button</li>
-              <li>X - A button</li>
-              <li>Shift - Select</li>
-              <li>Enter - Start</li>
+              {GB_BUTTONS.map((button) => (
+                <li key={button}>
+                  {keyLabel(keyBindings[button])} - {button}
+                </li>
+              ))}
+              <li>Change these in Settings</li>
             </ul>
 
             <h3 className="mb-1 font-medium text-foreground-secondary">Touch (mobile)</h3>

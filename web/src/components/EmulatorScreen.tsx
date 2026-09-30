@@ -17,7 +17,7 @@ import {
   type Palette,
 } from "@/lib/palettes";
 import { findSuperGameBoyPalette } from "@/lib/superGameBoyPalettes";
-import { useIntegerScaling } from "@/lib/settings";
+import { GB_BUTTONS, useIntegerScaling, useKeyBindings } from "@/lib/settings";
 import type { EmulatorInstance, EmulatorModule } from "@/lib/wasm/types";
 
 type LoadStatus = "loading" | "ready" | "error";
@@ -94,17 +94,6 @@ const TEST_ROM_GROUPS: { label: string; roms: Record<string, string> }[] = [
   },
 ];
 
-const KEY_TO_BUTTON: Record<string, keyof EmulatorModule["Button"]> = {
-  ArrowRight: "Right",
-  ArrowLeft: "Left",
-  ArrowUp: "Up",
-  ArrowDown: "Down",
-  z: "B",
-  x: "A",
-  Shift: "Select",
-  Enter: "Start",
-};
-
 export function EmulatorScreen() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const canvasWrapperRef = useRef<HTMLDivElement>(null);
@@ -144,6 +133,7 @@ export function EmulatorScreen() {
     height: SCREEN_HEIGHT,
   });
   const integerScaling = useIntegerScaling();
+  const keyBindings = useKeyBindings();
   const saveFlashTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const loadFlashTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -365,6 +355,10 @@ export function EmulatorScreen() {
   );
 
   useEffect(() => {
+    const codeToButton = new Map<string, keyof EmulatorModule["Button"]>(
+      GB_BUTTONS.map((button) => [keyBindings[button], button])
+    );
+
     const handleKey = (pressed: boolean) => (event: KeyboardEvent) => {
       // Typing (e.g. naming a custom palette) isn't playing: leave z/x,
       // arrows, Shift and Enter alone in text fields.
@@ -376,7 +370,7 @@ export function EmulatorScreen() {
         return;
       }
 
-      const buttonName = KEY_TO_BUTTON[event.key];
+      const buttonName = codeToButton.get(event.code);
       if (!buttonName) return;
 
       event.preventDefault();
@@ -392,7 +386,7 @@ export function EmulatorScreen() {
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("keyup", onKeyUp);
     };
-  }, [setButton]);
+  }, [setButton, keyBindings]);
 
   const saveCartRam = useCallback(() => {
     const emulator = emulatorRef.current;
