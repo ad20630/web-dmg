@@ -109,14 +109,18 @@ export function PalettePicker({
               subgroup: entry.subgroup,
             }));
     }
-    result[AUTO_PALETTE_GROUP].unshift(
-      {
-        key: AUTO_PALETTE_ALL,
-        label: AUTO_PALETTE_ALL_LABEL,
-        colors: autoColorsAll,
-        rainbow: autoSgbFromGame,
-        hint: "Applies SGB enhancements for supported games, else the game's GBC palette when it has one, grayscale otherwise",
-      },
+    // Grayscale is first in the list, so Auto Palette goes in front of it and
+    // the other Auto options right after it.
+    result[AUTO_PALETTE_GROUP].unshift({
+      key: AUTO_PALETTE_ALL,
+      label: AUTO_PALETTE_ALL_LABEL,
+      colors: autoColorsAll,
+      rainbow: autoSgbFromGame,
+      hint: "Applies SGB enhancements for supported games, else the game's GBC palette when it has one, grayscale otherwise",
+    });
+    result[AUTO_PALETTE_GROUP].splice(
+      2,
+      0,
       {
         key: AUTO_PALETTE,
         label: AUTO_PALETTE_LABEL,
@@ -162,7 +166,11 @@ export function PalettePicker({
   const cycle = (step: 1 | -1) => {
     const choices = PALETTE_GROUPS.flatMap((group) => sections[group]);
     const index = choices.findIndex((c) => c.key === current.key);
-    onChange(choices[(index + step + choices.length) % choices.length].key);
+    const next = choices[(index + step + choices.length) % choices.length];
+    onChange(next.key);
+    // Follow the selection into its group, so an open picker flips to that page.
+    const nextGroup = PALETTE_GROUPS.find((group) => sections[group].includes(next));
+    if (nextGroup) setTab(nextGroup);
   };
 
   const openPicker = () => {

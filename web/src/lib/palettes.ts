@@ -78,17 +78,6 @@ export const PALETTE_LIST: readonly PaletteEntry[] = [
     ],
   },
   {
-    key: "inverted",
-    label: "Inverted",
-    group: "hardware",
-    colors: [
-      [0, 0, 0],
-      [85, 85, 85],
-      [170, 170, 170],
-      [255, 255, 255],
-    ],
-  },
-  {
     key: "dmg",
     label: "DMG",
     group: "hardware",
