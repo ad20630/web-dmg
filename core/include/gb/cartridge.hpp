@@ -16,6 +16,11 @@ public:
     // Parses the header (MBC type, ROM/RAM size) and stores the ROM image.
     void load(const uint8_t* data, size_t size);
 
+    // Header says the game supports a Super Game Boy (byte 0x146 == 0x03 and
+    // old licensee code 0x14B == 0x33), which a real SGB requires before it
+    // will listen to the game.
+    bool supportsSgb() const;
+
     uint8_t read8(uint16_t address) const;  // 0x0000-0x7FFF, 0xA000-0xBFFF
     void write8(uint16_t address, uint8_t value);
 

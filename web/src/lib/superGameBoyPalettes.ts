@@ -36,6 +36,13 @@ const ENTRIES: SgbPaletteEntry[] = [
   { internalName: "GBWARS", game: "Game Boy Wars", key: "sgb-3-e" },
 ];
 
+// Header says the game can run on a Super Game Boy (byte 0x146 == 0x03 and
+// old licensee code 0x14B == 0x33); the same check the core uses to let it
+// send colors.
+export function supportsSuperGameBoy(rom: Uint8Array): boolean {
+  return rom.length > 0x14b && rom[0x146] === 0x03 && rom[0x14b] === 0x33;
+}
+
 function readTitle(rom: Uint8Array): string {
   let title = "";
   for (let i = 0x134; i <= 0x143 && i < rom.length; i++) {

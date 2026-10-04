@@ -15,7 +15,10 @@ import {
 import type { Rgb } from "@/lib/gameBoyColorPalettes";
 import {
   AUTO_PALETTE,
+  AUTO_PALETTE_ALL,
+  AUTO_PALETTE_ALL_LABEL,
   AUTO_PALETTE_GROUP,
+  DEFAULT_PALETTE,
   AUTO_PALETTE_LABEL,
   AUTO_PALETTE_SGB,
   AUTO_PALETTE_SGB_LABEL,
@@ -34,6 +37,7 @@ interface Choice {
   label: string;
   colors: Palette;
   hint?: string;
+  rainbow?: boolean; // swatch is a rainbow: the colors come from the game
   customId?: string; // set for the user's own palettes, which can be edited
   subgroup?: PresetSubgroup; // the header a preset is listed under
 }
@@ -53,8 +57,12 @@ interface PalettePickerProps {
   onChange: (key: string) => void;
   // What each Auto option is showing right now (the game's palette, or the
   // fallback), so its swatch previews the real colors.
+  autoColorsAll: Palette;
   autoColors: Palette;
   autoColorsSgb: Palette;
+  // The loaded game supports the Super Game Boy, so Auto (SGB) colors it
+  // itself rather than with one palette.
+  autoSgbFromGame: boolean;
   // Live preview of the palette being edited (null when not editing), drawn
   // on the game screen in place of the selected palette.
   onPreview: (colors: Palette | null) => void;
@@ -66,8 +74,10 @@ interface PalettePickerProps {
 export function PalettePicker({
   value,
   onChange,
+  autoColorsAll,
   autoColors,
   autoColorsSgb,
+  autoSgbFromGame,
   onPreview,
   onOpenChange,
 }: PalettePickerProps) {
@@ -101,6 +111,13 @@ export function PalettePicker({
     }
     result[AUTO_PALETTE_GROUP].unshift(
       {
+        key: AUTO_PALETTE_ALL,
+        label: AUTO_PALETTE_ALL_LABEL,
+        colors: autoColorsAll,
+        rainbow: autoSgbFromGame,
+        hint: "Applies SGB enhancements for supported games, else the game's GBC palette when it has one, grayscale otherwise",
+      },
+      {
         key: AUTO_PALETTE,
         label: AUTO_PALETTE_LABEL,
         colors: autoColors,
@@ -110,11 +127,12 @@ export function PalettePicker({
         key: AUTO_PALETTE_SGB,
         label: AUTO_PALETTE_SGB_LABEL,
         colors: autoColorsSgb,
-        hint: "Uses the game's corresponding SGB palette when it has one, 1-A otherwise",
+        rainbow: autoSgbFromGame,
+        hint: "Applies SGB enhancements for supported games, else its cooresponding preset, 1-A otherwise",
       }
     );
     return result;
-  }, [autoColors, autoColorsSgb, customPalettes]);
+  }, [autoColorsAll, autoColors, autoColorsSgb, autoSgbFromGame, customPalettes]);
 
   const currentGroup =
     PALETTE_GROUPS.find((group) => sections[group].some((c) => c.key === value)) ??
@@ -201,7 +219,7 @@ export function PalettePicker({
     if (!editing?.id) return;
     deleteCustomPalette(editing.id);
     // Don't leave the screen drawing with a palette that no longer exists.
-    if (value === customKey(editing.id)) onChange(AUTO_PALETTE);
+    if (value === customKey(editing.id)) onChange(DEFAULT_PALETTE);
     setEditing(null);
     setTab("custom");
   };
@@ -220,7 +238,7 @@ export function PalettePicker({
             : "border-outline bg-surface text-foreground-secondary"
         }`}
       >
-        <PaletteSwatch colors={choice.colors} className="h-8 w-full" />
+        <PaletteSwatch colors={choice.colors} rainbow={choice.rainbow} className="h-8 w-full" />
         <span className="truncate">{choice.label}</span>
       </button>
     );
@@ -245,7 +263,11 @@ export function PalettePicker({
           title="Choose palette"
           className="flex w-40 shrink-0 items-center gap-2 rounded-sm border border-outline bg-surface px-2 py-1 text-sm text-foreground-secondary"
         >
-          <PaletteSwatch colors={current.colors} className="h-[18px] w-10 shrink-0" />
+          <PaletteSwatch
+            colors={current.colors}
+            rainbow={current.rainbow}
+            className="h-[18px] w-10 shrink-0"
+          />
           <span className="min-w-0 flex-1 truncate text-left">{current.label}</span>
         </button>
         <button

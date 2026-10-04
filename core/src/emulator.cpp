@@ -8,10 +8,12 @@ constexpr int kCyclesPerFrame = 70224;
 
 // Bumped whenever the save-state layout changes, so old/foreign blobs are
 // rejected up front instead of partially applied.
-constexpr uint8_t kSaveStateVersion = 2;
+constexpr uint8_t kSaveStateVersion = 3;
 } // namespace
 
-Emulator::Emulator() = default;
+Emulator::Emulator() {
+    joypad_.setSgb(&sgb_);
+}
 Emulator::~Emulator() = default;
 
 void Emulator::reset() {
@@ -20,11 +22,17 @@ void Emulator::reset() {
     ppu_.reset();
     apu_.reset();
     joypad_.reset();
+    sgb_.reset();
     mmu_.reset();
 }
 
 void Emulator::loadRom(const uint8_t* data, size_t size) {
     cartridge_.load(data, size);
+    sgb_.setEnabled(sgbAllowed_ && cartridge_.supportsSgb());
+}
+
+void Emulator::setSgbEnabled(bool enabled) {
+    sgbAllowed_ = enabled;
 }
 
 int Emulator::step() {
@@ -34,6 +42,9 @@ int Emulator::step() {
     }
     if (const uint8_t ppuInterrupts = ppu_.tick(cycles)) {
         mmu_.requestInterrupt(ppuInterrupts);
+        if (ppuInterrupts & 0x01) { // VBlank: the frame is complete
+            sgb_.onVBlank(ppu_.framebuffer());
+        }
     }
     apu_.tick(cycles);
     if (joypad_.consumeInterrupt()) {
@@ -64,6 +75,7 @@ const std::vector<uint8_t>& Emulator::captureSaveState() {
     cpu_.saveState(writer);
     timer_.saveState(writer);
     joypad_.saveState(writer);
+    sgb_.saveState(writer);
     ppu_.saveState(writer);
     apu_.saveState(writer);
     mmu_.saveState(writer);
@@ -83,6 +95,7 @@ bool Emulator::loadState(const uint8_t* data, size_t size) {
     cpu_.loadState(reader);
     timer_.loadState(reader);
     joypad_.loadState(reader);
+    sgb_.loadState(reader);
     ppu_.loadState(reader);
     apu_.loadState(reader);
     mmu_.loadState(reader);

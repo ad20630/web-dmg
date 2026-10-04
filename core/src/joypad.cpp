@@ -1,5 +1,7 @@
 #include "gb/joypad.hpp"
 
+#include "gb/sgb.hpp"
+
 namespace gb {
 
 Joypad::Joypad() = default;
@@ -30,6 +32,11 @@ void Joypad::loadState(StateReader& reader) {
 }
 
 uint8_t Joypad::outputLowNibble() const {
+    if (sgb_) {
+        const int playerId = sgb_->joypadIdNibble(selectBits_);
+        if (playerId >= 0) return static_cast<uint8_t>(playerId);
+        if (sgb_->currentPlayer() != 0) return 0x0F; // other players' pads aren't connected
+    }
     uint8_t nibble = 0x0F;
     if ((selectBits_ & 0x10) == 0) nibble &= directionState_;
     if ((selectBits_ & 0x20) == 0) nibble &= actionState_;
@@ -50,6 +57,7 @@ uint8_t Joypad::read8() const {
 
 void Joypad::write8(uint8_t value) {
     selectBits_ = value & 0x30;
+    if (sgb_) sgb_->onJoypadWrite(selectBits_);
     refreshInterrupt();
 }
 

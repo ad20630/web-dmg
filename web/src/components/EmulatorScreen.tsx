@@ -10,13 +10,14 @@ import { useCustomPalettes } from "@/lib/customPalettes";
 import { findGameBoyColorPalette } from "@/lib/gameBoyColorPalettes";
 import {
   AUTO_PALETTE,
+  AUTO_PALETTE_ALL,
   AUTO_PALETTE_SGB,
   DEFAULT_PALETTE,
   paletteColor,
   resolvePalette,
   type Palette,
 } from "@/lib/palettes";
-import { findSuperGameBoyPalette } from "@/lib/superGameBoyPalettes";
+import { findSuperGameBoyPalette, supportsSuperGameBoy } from "@/lib/superGameBoyPalettes";
 import { GB_BUTTONS, useIntegerScaling, useKeyBindings } from "@/lib/settings";
 import type { EmulatorInstance, EmulatorModule } from "@/lib/wasm/types";
 
@@ -24,6 +25,11 @@ type LoadStatus = "loading" | "ready" | "error";
 
 const SCREEN_WIDTH = 160;
 const SCREEN_HEIGHT = 144;
+const SGB_CELLS_X = SCREEN_WIDTH / 8;
+
+// SGB mask modes (Sgb::Mask in the core); 3 shows the solid backdrop color.
+const SGB_MASK_FREEZE = 1;
+const SGB_MASK_BLACK = 2;
 
 //runs at the gameboy frame rate independent of refresh rate
 const GB_FRAME_MS = (70224 / 4194304) * 1000;
@@ -110,6 +116,7 @@ export function EmulatorScreen() {
   const [paletteKey, setPaletteKey] = useState<string>(DEFAULT_PALETTE);
   const [autoPalette, setAutoPalette] = useState<Palette | null>(null);
   const [autoPaletteSgb, setAutoPaletteSgb] = useState<Palette | null>(null);
+  const [sgbGame, setSgbGame] = useState(false);
   const customPalettes = useCustomPalettes();
   // Colors from the palette editor's draft, shown live while it's open.
   const [previewPalette, setPreviewPalette] = useState<Palette | null>(null);
@@ -239,8 +246,13 @@ export function EmulatorScreen() {
   // change repaints without giving drawFrame a new identity - the frame loop
   // below depends on it and would restart on every change (each color drag).
   const palette =
-    previewPalette ?? resolvePalette(paletteKey, autoPalette, autoPaletteSgb, customPalettes);
+    previewPalette ??
+    resolvePalette(paletteKey, autoPalette, autoPaletteSgb, customPalettes, sgbGame);
   const paletteRef = useRef<Palette>(palette);
+  // "Auto (SGB)" lets a Super Game Boy-aware game color itself (per-tile
+  // palettes, e.g. Pokemon's towns); it's only honored once the game has set
+  // a palette, so until then the static Auto (SGB) palette shows.
+  const useGameSgbColorsRef = useRef(false);
 
   const drawFrame = useCallback(() => {
     const emulator = emulatorRef.current;
@@ -255,7 +267,51 @@ export function EmulatorScreen() {
     }
     const imageData = imageDataRef.current;
     const framebuffer = emulator.getFramebuffer();
+
+    // The game masks the screen while it uploads palettes and attributes,
+    // which it does by drawing the data as tiles on the Game Boy's own
+    // screen. The mask applies with any palette, not just the SGB one.
+    const mask = emulator.getSgbMask();
+    if (mask === SGB_MASK_FREEZE) return; // keep the picture already on the canvas
+
     const colors = paletteRef.current;
+    const useSgbColors = useGameSgbColorsRef.current && emulator.sgbHasColors();
+    const sgbColors = useSgbColors ? emulator.getSgbColors() : null;
+
+    if (mask !== 0) {
+      // Black, or a solid backdrop color (palette 0, color 0).
+      let [r, g, b] = paletteColor(colors, 0, 0);
+      if (sgbColors) [r, g, b] = sgbColors;
+      if (mask === SGB_MASK_BLACK) r = g = b = 0;
+      const data = imageData.data;
+      for (let offset = 0; offset < data.length; offset += 4) {
+        data[offset] = r;
+        data[offset + 1] = g;
+        data[offset + 2] = b;
+        data[offset + 3] = 255;
+      }
+      ctx.putImageData(imageData, 0, 0);
+      return;
+    }
+
+    if (sgbColors) {
+      const attributes = emulator.getSgbAttributes();
+      const data = imageData.data;
+      for (let y = 0; y < SCREEN_HEIGHT; y++) {
+        const attributeRow = (y >> 3) * SGB_CELLS_X;
+        for (let x = 0; x < SCREEN_WIDTH; x++) {
+          const i = y * SCREEN_WIDTH + x;
+          const color = (attributes[attributeRow + (x >> 3)] * 4 + (framebuffer[i] & 0x03)) * 3;
+          const offset = i * 4;
+          data[offset] = sgbColors[color];
+          data[offset + 1] = sgbColors[color + 1];
+          data[offset + 2] = sgbColors[color + 2];
+          data[offset + 3] = 255;
+        }
+      }
+      ctx.putImageData(imageData, 0, 0);
+      return;
+    }
 
     for (let i = 0; i < framebuffer.length; i++) {
       const pixel = framebuffer[i];
@@ -341,8 +397,11 @@ export function EmulatorScreen() {
   // the emulator isn't running (e.g. before a ROM is loaded).
   useEffect(() => {
     paletteRef.current = palette;
+    useGameSgbColorsRef.current =
+      previewPalette === null &&
+      (paletteKey === AUTO_PALETTE_SGB || (paletteKey === AUTO_PALETTE_ALL && sgbGame));
     drawFrame();
-  }, [palette, drawFrame]);
+  }, [palette, paletteKey, previewPalette, sgbGame, drawFrame]);
 
   const setButton = useCallback(
     (buttonName: keyof EmulatorModule["Button"], pressed: boolean) => {
@@ -466,6 +525,7 @@ export function EmulatorScreen() {
 
     setAutoPalette(findGameBoyColorPalette(bytes));
     setAutoPaletteSgb(findSuperGameBoyPalette(bytes));
+    setSgbGame(supportsSuperGameBoy(bytes));
 
     const cartridgeId = readCartridgeId(bytes);
     cartridgeIdRef.current = cartridgeId;
@@ -670,8 +730,10 @@ export function EmulatorScreen() {
           <PalettePicker
             value={paletteKey}
             onChange={setPaletteKey}
+            autoColorsAll={resolvePalette(AUTO_PALETTE_ALL, autoPalette, autoPaletteSgb, customPalettes, sgbGame)}
             autoColors={resolvePalette(AUTO_PALETTE, autoPalette, autoPaletteSgb, customPalettes)}
             autoColorsSgb={resolvePalette(AUTO_PALETTE_SGB, autoPalette, autoPaletteSgb, customPalettes)}
+            autoSgbFromGame={sgbGame}
             onPreview={setPreviewPalette}
             onOpenChange={setPalettePickerOpen}
           />

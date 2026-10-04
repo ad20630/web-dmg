@@ -90,6 +90,28 @@ bool loadSaveState(gb::Emulator& emulator, const val& data) {
     return emulator.loadState(bytes.data(), bytes.size());
 }
 
+// Super Game Boy colorization state (see gb::Sgb). The views alias wasm
+// memory owned by the emulator, so re-fetch them after every runFrame()
+// instead of caching them.
+bool sgbHasColors(gb::Emulator& emulator) {
+    return emulator.sgb().hasColors();
+}
+
+// 0 = none, 1 = freeze the last picture, 2 = black, 3 = solid backdrop color.
+int getSgbMask(gb::Emulator& emulator) {
+    return static_cast<int>(emulator.sgb().mask());
+}
+
+// 4 palettes x 4 colors x RGB bytes, shade 0 (lightest) first.
+val getSgbColors(gb::Emulator& emulator) {
+    return val(typed_memory_view(static_cast<size_t>(gb::Sgb::kColorBytes), emulator.sgb().colors()));
+}
+
+// One palette number (0-3) per 8x8 screen cell: 20 x 18, row-major.
+val getSgbAttributes(gb::Emulator& emulator) {
+    return val(typed_memory_view(static_cast<size_t>(gb::Sgb::kAttributeBytes), emulator.sgb().attributes()));
+}
+
 } // namespace
 
 EMSCRIPTEN_BINDINGS(gb_core) {
@@ -115,5 +137,10 @@ EMSCRIPTEN_BINDINGS(gb_core) {
         .function("loadCartRam", &loadCartRam)
         .function("getSaveState", &getSaveState)
         .function("loadSaveState", &loadSaveState)
+        .function("setSgbEnabled", &gb::Emulator::setSgbEnabled)
+        .function("sgbHasColors", &sgbHasColors)
+        .function("getSgbMask", &getSgbMask)
+        .function("getSgbColors", &getSgbColors)
+        .function("getSgbAttributes", &getSgbAttributes)
         .function("setButtonPressed", &gb::Emulator::setButtonPressed);
 }

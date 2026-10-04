@@ -294,6 +294,10 @@ void Cartridge::latchRtc() {
     rtcLatched_ = rtcLive_;
 }
 
+bool Cartridge::supportsSgb() const {
+    return rom_.size() > 0x14B && rom_[0x146] == 0x03 && rom_[0x14B] == 0x33;
+}
+
 void Cartridge::setRamData(const uint8_t* data, size_t size) {
     const size_t count = std::min(size, ram_.size());
     std::copy(data, data + count, ram_.begin());

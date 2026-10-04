@@ -11,6 +11,7 @@ set(GB_CORE_SOURCES
     src/apu.cpp
     src/timer.cpp
     src/joypad.cpp
+    src/sgb.cpp
     src/cartridge.cpp
     src/emulator.cpp
 )

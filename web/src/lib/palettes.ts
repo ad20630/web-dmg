@@ -43,7 +43,11 @@ export const AUTO_PALETTE_LABEL = "Auto (GBC)";
 export const AUTO_PALETTE_GROUP: PaletteGroup = "hardware";
 export const AUTO_PALETTE_SGB = "auto-sgb";
 export const AUTO_PALETTE_SGB_LABEL = "Auto (SGB)";
-export const DEFAULT_PALETTE = AUTO_PALETTE;
+// Picks per game: Auto (SGB) for SGB-enhanced games, else Auto (GBC) (which
+// is grayscale when the game has no GBC palette).
+export const AUTO_PALETTE_ALL = "auto-all";
+export const AUTO_PALETTE_ALL_LABEL = "Auto Palette";
+export const DEFAULT_PALETTE = AUTO_PALETTE_ALL;
 export const FALLBACK_PALETTE = "grayscale";
 // The SGB BIOS's own default when a game isn't in its palette table.
 export const FALLBACK_PALETTE_SGB = "sgb-1-a";
@@ -944,9 +948,13 @@ export function resolvePalette(
   key: string,
   autoPalette: Palette | null,
   autoPaletteSgb: Palette | null,
-  customPalettes: readonly CustomPalette[]
+  customPalettes: readonly CustomPalette[],
+  sgbGame = false
 ): Palette {
   const fallback = PALETTES_BY_KEY.get(FALLBACK_PALETTE)?.colors ?? PALETTE_LIST[0].colors;
+  if (key === AUTO_PALETTE_ALL) {
+    key = sgbGame ? AUTO_PALETTE_SGB : AUTO_PALETTE;
+  }
   if (key === AUTO_PALETTE) return autoPalette ?? fallback;
   if (key === AUTO_PALETTE_SGB) {
     return autoPaletteSgb ?? PALETTES_BY_KEY.get(FALLBACK_PALETTE_SGB)?.colors ?? fallback;

@@ -11,6 +11,7 @@
 #include "gb/mmu.hpp"
 #include "gb/ppu.hpp"
 #include "gb/save_state.hpp"
+#include "gb/sgb.hpp"
 #include "gb/timer.hpp"
 
 namespace gb {
@@ -29,6 +30,11 @@ public:
 
     void setButtonPressed(Joypad::Button button, bool pressed);
 
+    // Super Game Boy colorization (see Sgb). On by default; only takes effect
+    // for ROMs whose header says they support an SGB. Takes effect at the
+    // next loadRom().
+    void setSgbEnabled(bool enabled);
+
     // Snapshots the full machine state (CPU/PPU/MMU/timer/joypad/cartridge,
     // including MBC banking and RTC) into saveStateBuffer_ and returns a
     // reference to it. The reference aliases internal storage and is only
@@ -46,6 +52,7 @@ public:
     Ppu& ppu() { return ppu_; }
     Apu& apu() { return apu_; }
     Joypad& joypad() { return joypad_; }
+    const Sgb& sgb() const { return sgb_; }
     Cartridge& cartridge() { return cartridge_; }
 
 private:
@@ -56,9 +63,11 @@ private:
     Apu apu_;
     Timer timer_;
     Joypad joypad_;
+    Sgb sgb_;
     Mmu mmu_{cartridge_, ppu_, apu_, timer_, joypad_};
     Cpu cpu_;
 
+    bool sgbAllowed_ = true;
     std::vector<uint8_t> saveStateBuffer_;
 };
 
