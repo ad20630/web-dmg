@@ -72,8 +72,8 @@ export function SettingsMenu() {
       setRebinding(null);
     };
     window.addEventListener("keydown", handleKey, true);
-    // Give up if no key is pressed within 5 seconds.
-    const timeout = window.setTimeout(() => setRebinding(null), 5000);
+    // Give up if no key is pressed within 3 seconds.
+    const timeout = window.setTimeout(() => setRebinding(null), 3000);
     return () => {
       window.removeEventListener("keydown", handleKey, true);
       window.clearTimeout(timeout);

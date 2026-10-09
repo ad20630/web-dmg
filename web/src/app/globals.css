@@ -112,21 +112,21 @@
    console's signature magenta A/B buttons. */
 :root[data-theme="dmg"] {
   color-scheme: light;
-  --color-background: var(--color-stone-300);
-  --color-surface: var(--color-stone-100);
-  --color-surface-translucent: theme("colors.stone.100 / 80%");
-  --color-surface-strong: var(--color-stone-400);
+  --color-background: var(--color-taupe-300);
+  --color-surface: var(--color-taupe-100);
+  --color-surface-translucent: theme("colors.taupe.100 / 80%");
+  --color-surface-strong: var(--color-taupe-400);
   --color-pad: var(--color-neutral-900);
   --color-pad-active: var(--color-neutral-700);
-  --color-pad-foreground: var(--color-stone-200);
+  --color-pad-foreground: var(--color-taupe-200);
   --color-ab-button: var(--color-rose-700);
   --color-ab-button-active: var(--color-rose-800);
-  --color-ab-foreground: var(--color-stone-100);
-  --color-outline: var(--color-stone-400);
-  --color-outline-strong: var(--color-stone-600);
-  --color-foreground: var(--color-stone-900);
-  --color-foreground-secondary: var(--color-stone-700);
-  --color-foreground-muted: var(--color-stone-500);
+  --color-ab-foreground: var(--color-taupe-100);
+  --color-outline: var(--color-taupe-400);
+  --color-outline-strong: var(--color-taupe-600);
+  --color-foreground: var(--color-taupe-900);
+  --color-foreground-secondary: var(--color-taupe-700);
+  --color-foreground-muted: var(--color-taupe-500);
   --color-success: var(--color-emerald-600);
   --color-success-surface: var(--color-emerald-100);
   --color-success-foreground: var(--color-emerald-800);
