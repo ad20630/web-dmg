@@ -72,7 +72,12 @@ export function SettingsMenu() {
       setRebinding(null);
     };
     window.addEventListener("keydown", handleKey, true);
-    return () => window.removeEventListener("keydown", handleKey, true);
+    // Give up if no key is pressed within 5 seconds.
+    const timeout = window.setTimeout(() => setRebinding(null), 5000);
+    return () => {
+      window.removeEventListener("keydown", handleKey, true);
+      window.clearTimeout(timeout);
+    };
   }, [open, rebinding]);
 
   useEffect(() => {
