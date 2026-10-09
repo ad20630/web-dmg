@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { CustomPaletteEditor } from "@/components/CustomPaletteEditor";
 import { PaletteSwatch } from "@/components/PaletteSwatch";
@@ -89,6 +89,7 @@ export function PalettePicker({
   const [tab, setTab] = useState<PaletteGroup>(AUTO_PALETTE_GROUP);
   const [editing, setEditing] = useState<Draft | null>(null);
   const [helpChoice, setHelpChoice] = useState<Choice | null>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
   const customPalettes = useCustomPalettes();
 
   const sections = useMemo(() => {
@@ -160,6 +161,15 @@ export function PalettePicker({
     window.addEventListener("keydown", handleKey, true);
     return () => window.removeEventListener("keydown", handleKey, true);
   }, [open, editing]);
+
+  // Keep the selected palette in view in the open list, e.g. after stepping
+  // with the arrows. `tab` is a dependency so the new page is laid out first.
+  useEffect(() => {
+    if (!open || editing) return;
+    gridRef.current
+      ?.querySelector<HTMLElement>('[aria-pressed="true"]')
+      ?.scrollIntoView({ block: "nearest" });
+  }, [open, editing, tab, current.key]);
 
   // Steps through every palette in section order (Hardware, GBC Boot, SGB,
   // Preset, then Custom), wrapping from the last back to the first.
@@ -362,6 +372,7 @@ export function PalettePicker({
                 </div>
 
                 <div
+                  ref={gridRef}
                   role="group"
                   aria-label={PALETTE_GROUP_LABELS[tab]}
                   className="grid min-h-0 grid-cols-2 gap-2 overflow-y-auto"
